@@ -1,0 +1,47 @@
+<html>
+<script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+<script src="serverless_rooms.js"></script>
+
+<div id="connectionStatus">Not connected...</div>
+<div id="messages"></div>
+<div>
+	<a> Type a room ID to join: </a>
+	<input id="connectInput"></input>
+	<button id="connectInputButton" onclick="connectToRoom();">connect</button>
+</div>
+<div>
+	<a> Send a message here when you are connected: </a>
+	<input id="messageInput"></input>
+	<button id="messageInputButton" onclick="sendMessage();">send</button>
+</div>
+	<div id="messages"></div>
+
+
+<script>
+let serverlessRoomConnection = null;
+function connectToRoom() {
+	if (serverlessRoomConnection != null) {
+		serverlessRoomConnection.close();
+	}
+	let roomName = document.getElementById("connectInput").value;
+
+	if (roomName.length == 0) return;
+	serverlessRoomConnection = serverlessRooms.joinRoom(roomName);
+	serverlessRoomConnection.on("status", function(message) {
+		document.getElementById("connectionStatus").innerHTML = message;
+	});
+	serverlessRoomConnection.on("message", function(message) {
+		let messageDiv = document.createElement("div");
+		messageDiv.innerHTML = message;
+		document.getElementById("messages").appendChild(messageDiv);
+	});
+}
+
+function sendMessage() {
+	if (serverlessRoomConnection == null) return;
+
+	let message = document.getElementById("messageInput").value;
+	if (message.length > 0) serverlessRoomConnection.message(message);
+}
+</script>
+</html>
