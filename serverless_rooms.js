@@ -32,11 +32,12 @@ serverlessRooms.joinRoom = function(name) {
 	let setupConnectionHeartbeatCheck = function(conn) {
 			conn.lastPing = Date.now();
 			let heartbeatCheckFunction = function() {
-				if (Date.now() - conn.lastPing > 1000) {
+				if (Date.now() - conn.lastPing > 2000) {
 					var newHostPeer = new Peer(name);
 
 					newHostPeer.on('error', function(e){
 						if (e.type == "unavailable-id") {
+							conn.close();
 							setupListenerConnection();
 						}
 						else {
