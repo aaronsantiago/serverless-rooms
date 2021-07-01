@@ -7,8 +7,10 @@ serverlessRooms.joinRoom = function(name) {
 	let callbacks = {};
 	let connections = [];
 	let currentlyHost = false;
+	let closed = false;
 
 	let connectionDataCallback = function(data, conn) {
+			if(closed) return;
 			console.log(data);
 			if (data == "ping") {
 				conn.lastPing = Date.now();
@@ -30,8 +32,10 @@ serverlessRooms.joinRoom = function(name) {
 		};
 
 	let setupConnectionHeartbeatCheck = function(conn) {
+			if (closed) return;
 			conn.lastPing = Date.now();
 			let heartbeatCheckFunction = function() {
+				if (closed) return;
 				if (Date.now() - conn.lastPing > 2000) {
 					var newHostPeer = new Peer(name);
 
@@ -63,12 +67,13 @@ serverlessRooms.joinRoom = function(name) {
 			heartbeatCheckFunction();
 		}
 	let peerConnectionCallback = function(conn) {
+			if (closed) return;
 			connections.push(conn);
 
 			// Receive messages
 			conn.on('data', (d) => connectionDataCallback(d,conn));
-			conn.on("close", () => {console.log("connection closed!!")});
-			conn.on("error", (e) => {console.log("connection error"); console.log(e);})
+			conn.on("close", () => {reportStatus("closed"); console.log("connection closed!!")});
+			conn.on("error", (e) => {reportStatus("closed"); console.log("connection error"); console.log(e);})
 		};
 
 	let reportStatus = function(status) {
@@ -80,10 +85,12 @@ serverlessRooms.joinRoom = function(name) {
 		}
 
 	let setupListenerConnection = function() {
+			if (closed) return;
 			reportStatus("connectingToHost");
 			var conn = peer.connect(name);
 			connections.push(conn);
 			conn.on("open", () => {
+				if (closed) return;
 				reportStatus("connected");
 				conn.on("data", (d) => connectionDataCallback(d, conn));
 				setupConnectionHeartbeatCheck(conn);
@@ -95,6 +102,7 @@ serverlessRooms.joinRoom = function(name) {
 	var peer = new Peer(name);
 
 	peer.on('error', function(e){
+		if (closed) return;
 		if (e.type == "unavailable-id") {
 			peer = new Peer();
 			peer.on('open', setupListenerConnection);
@@ -106,6 +114,7 @@ serverlessRooms.joinRoom = function(name) {
 	});
 
 	peer.on('open', function(id) {
+		if (closed) return;
 		currentlyHost = true;
 		reportStatus("host");
 	});
@@ -127,6 +136,7 @@ serverlessRooms.joinRoom = function(name) {
 		},
 		close: () => {
 			peer.destroy();
+			closed = true;
 		}
 
 	}
